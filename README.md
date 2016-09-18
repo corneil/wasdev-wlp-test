@@ -6,7 +6,7 @@ When invoking the task with installDir and outputDir even if outputDir contains 
 This project creates 2 sets of Gradle tasks for invoking the `net.wasdev.wlp.ant:server` task
 In one case only serverName, operation and installDir is supplied and in the other case outputDir is added.
 
-Invoke using `./gradlew -i clean startServer`
+Invoke using `./gradlew -i clean startServer`  
 In the first case output is:
 ```
 invoke:[operation:create, serverName:test, installDir:build\wlp]
@@ -16,7 +16,7 @@ invoke:[operation:create, serverName:test, installDir:build\wlp]
 [ant:antlib:net.wasdev.wlp.ant:server] Server test created.
 ```
 
-Invoke using `./gradlew -i clean startServerBroken`
+Invoke using `./gradlew -i clean startServerBroken`  
 In the second case:
 ```
 invoke:[operation:create, serverName:test, installDir:build\wlp, outputDir:build\wlp\usr\servers\test]
