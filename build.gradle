@@ -1,0 +1,102 @@
+repositories {
+    maven {
+        url 'http://public.dhe.ibm.com/ibmdl/export/pub/software/websphere/wasdev/maven/repository/'
+    }
+    maven {
+        url 'http://liberty-app-accelerator.wasdev.developer.ibm.com/start/api/v1/repo'
+    }
+    maven {
+        url 'https://oss.sonatype.org/content/repositories/snapshots/'
+    }
+}
+
+group 'com.github.corneil'
+version '1.0-SNAPSHOT'
+
+apply plugin: 'groovy'
+
+configurations {
+    wlpAnt
+}
+
+dependencies {
+    wlpAnt 'net.wasdev.wlp.ant:wlp-anttasks:1.3-SNAPSHOT'
+}
+def installBaseDir = project.buildDir;
+
+task installLiberty << {
+    ant {
+        taskdef(resource: 'net/wasdev/wlp/ant/antlib.xml', uri: 'antlib:net.wasdev.wlp.ant', classpath: configurations.wlpAnt.asPath)
+        'antlib:net.wasdev.wlp.ant:install-liberty'(baseDir: installBaseDir, type: 'javaee7', version: '8.5.5_09')
+    }
+}
+
+def baseDir = new File(installBaseDir, 'wlp')
+def serverName = 'test'
+def outputDir = new File(baseDir, "usr/servers/$serverName")
+def userDir = new File(baseDir, 'usr')
+def operations = ['create', 'run', 'start', 'stop', 'status']
+
+def invokeServerAntTask(Map<String, Object> params) {
+    logger.lifecycle "invoke:$params"
+    ant {
+        taskdef(resource: 'net/wasdev/wlp/ant/antlib.xml', uri: 'antlib:net.wasdev.wlp.ant', classpath: configurations.wlpAnt.asPath)
+        'antlib:net.wasdev.wlp.ant:server'(params)
+    }
+}
+
+operations.each { String operation ->
+    task "${operation}Server" {
+        if(operation == 'create') {
+            dependsOn installLiberty
+        } else {
+            dependsOn 'createServer'
+        }
+        doLast {
+            def projectPath = project.path;
+            logging.captureStandardOutput LogLevel.LIFECYCLE
+            logger.lifecycle("${operation}Server:start")
+            def execute = true
+            if (operation == 'create' && outputDir.exists()) {
+                execute = false
+            }
+            if (execute) {
+                invokeServerAntTask([operation: operation, serverName: serverName, installDir: baseDir])
+                logger.lifecycle("${operation}Server:completed")
+            } else {
+                logger.lifecycle("${operation}Server:skipped")
+            }
+        }
+    }
+    task "${operation}ServerBroken" {
+        if(operation == 'create') {
+            dependsOn installLiberty
+        } else {
+            dependsOn 'createServerBroken'
+        }
+        doLast {
+            def projectPath = project.path;
+            logging.captureStandardOutput LogLevel.LIFECYCLE
+            logger.lifecycle("${operation}ServerBroken:start")
+            def execute = true
+            if (operation == 'create' && outputDir.exists()) {
+                execute = false
+            }
+            if (execute) {
+                invokeServerAntTask([operation: operation, serverName: serverName, installDir: baseDir, outputDir: outputDir, userDir: userDir])
+                logger.lifecycle("${operation}ServerBroken:completed")
+            } else {
+                logger.lifecycle("${operation}ServerBroken:skipped")
+            }
+        }
+    }
+}
+
+
+createServer.dependsOn installLiberty
+startServer.dependsOn createServer
+stopServer.dependsOn createServer
+
+createServerBroken.dependsOn installLiberty
+startServerBroken.dependsOn createServerBroken
+stopServerBroken.dependsOn createServerBroken
